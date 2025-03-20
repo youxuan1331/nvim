@@ -10,7 +10,6 @@ local opt = {
 -- 本地变量
 local map = vim.api.nvim_set_keymap
 
-
 -- Telescope
 -- 查找文件
 map("n", "<C-p>", ":Telescope find_files<CR>", opt)
@@ -26,7 +25,6 @@ map("n", "tn", ":BufferLineCycleNext<CR>", opt)
 map("n", "tp", ":BufferLineCyclePrev<CR>", opt)
 map("i", "tn", "<Esc>:BufferLineCycleNext<CR>", opt)
 map("i", "tp", "<Esc>:BufferLineCyclePrev<CR>", opt)
-
 
 -- 辅助函数：创建一个浮动窗口，并在窗口中显示指定内容
 local function open_floating_window(content, title)
@@ -57,13 +55,13 @@ local function open_floating_window(content, title)
 
     -- 设置 <Esc> 快捷键，退出时关闭窗口
     local close_window_mapping = string.format(
-    [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
+        [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
     vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', close_window_mapping, { noremap = true, silent = true })
 
     return win
 end
 
--- 编译并运行 C++ 文件的函数
+-- 编译并运行 C/C++ 文件的函数
 function compile_and_run_cpp()
     local bufnr = vim.api.nvim_get_current_buf()
     local filepath = vim.api.nvim_buf_get_name(bufnr)
@@ -71,7 +69,7 @@ function compile_and_run_cpp()
 
     if ext == '.cpp' then  -- 仅对 C++ 文件生效
         local filename_without_ext = filepath:match("([^/]+)%.cpp$")
-        local compile_command = "g++ " .. filepath .. " -o " .. filename_without_ext
+        local compile_command = "clang " .. filepath .. " -o " .. filename_without_ext .. " -lstdc++"
 
         -- 执行编译命令
         local compile_result = vim.fn.system(compile_command)
@@ -81,7 +79,6 @@ function compile_and_run_cpp()
             local success_message = "Compilation successful, executable is " .. filename_without_ext .. "\n\nRunning executable..."
             print(success_message)
 
-            -- 创建浮动终端窗口，用于运行生成的可执行文件
             local width = vim.api.nvim_get_option("columns")
             local height = vim.api.nvim_get_option("lines")
             local win_height = math.ceil(height * 0.5)
@@ -109,10 +106,10 @@ function compile_and_run_cpp()
             vim.cmd('startinsert')
 
             local close_window_mapping = string.format(
-            [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
+                [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
             vim.api.nvim_buf_set_keymap(buf, 't', '<Esc>', close_window_mapping, { noremap = true, silent = true })
         else
-            -- 编译失败，将错误信息显示在浮动窗口中
+            -- 编译失败，显示错误信息
             local error_message = "Compilation failed:\n" .. compile_result
             open_floating_window(error_message, "Compile Error")
         end
@@ -129,7 +126,6 @@ function compile_and_run_cpp()
             local success_message = "Compilation successful, executable is " .. filename_without_ext .. "\n\nRunning executable..."
             print(success_message)
 
-            -- 创建浮动终端窗口，用于运行生成的可执行文件
             local width = vim.api.nvim_get_option("columns")
             local height = vim.api.nvim_get_option("lines")
             local win_height = math.ceil(height * 0.5)
@@ -157,10 +153,10 @@ function compile_and_run_cpp()
             vim.cmd('startinsert')
 
             local close_window_mapping = string.format(
-            [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
+                [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
             vim.api.nvim_buf_set_keymap(buf, 't', '<Esc>', close_window_mapping, { noremap = true, silent = true })
         else
-            -- 编译失败，将错误信息显示在浮动窗口中
+            -- 编译失败，显示错误信息
             local error_message = "Compilation failed:\n" .. compile_result
             open_floating_window(error_message, "Compile Error")
         end
@@ -169,6 +165,6 @@ function compile_and_run_cpp()
     end
 end
 
--- F5 键映射：用于编译并运行 C++ 文件
+-- F5 键映射：用于编译并运行 C/C++ 文件
 map('n', '<F5>', [[<Cmd>lua compile_and_run_cpp()<CR>]], opt)
 map('i', '<F5>', [[<Cmd>lua compile_and_run_cpp()<CR>]], opt)
