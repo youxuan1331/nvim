@@ -168,3 +168,28 @@ end
 -- F5 键映射：用于编译并运行 C/C++ 文件
 map('n', '<F5>', [[<Cmd>lua compile_and_run_cpp()<CR>]], opt)
 map('i', '<F5>', [[<Cmd>lua compile_and_run_cpp()<CR>]], opt)
+
+vim.keymap.set("n", "<leader>nn", function()
+  require("notify").dismiss({ silent = true, pending = true })
+end, { desc = "关闭所有通知" })
+
+-- Git 相关快捷键（Telescope + Gitsigns）
+map("n", "<leader>gc", ":Telescope git_commits<CR>", opt)       -- 所有提交
+map("n", "<leader>gb", ":Telescope git_bcommits<CR>", opt)      -- 当前文件提交历史
+map("n", "<leader>gs", ":Telescope git_status<CR>", opt)        -- Git 状态
+map("n", "<leader>gd", ":Gitsigns diffthis<CR>", opt)           -- 当前文件 diff（gitsigns 浮窗）
+map("n", "<leader>hb", ":Gitsigns blame_line<CR>", opt)         -- 当前行 Git Blame
+map("n", "<leader>hp", ":Gitsigns preview_hunk<CR>", opt)       -- 当前 Hunk 的 diff 预览
+
+wk.register({
+  g = {
+    name = "Git",
+    c = { "<cmd>Telescope git_commits<CR>", "查看所有提交" },
+    b = { "<cmd>Telescope git_bcommits<CR>", "当前文件提交历史" },
+    s = { "<cmd>Telescope git_status<CR>", "Git 状态" },
+    d = { "<cmd>Gitsigns diffthis<CR>", "当前文件 diff" },
+    h = { "<cmd>Gitsigns blame_line<CR>", "当前行 blame" },
+    p = { "<cmd>Gitsigns preview_hunk<CR>", "预览当前改动" },
+  },
+}, { prefix = "<leader>" })
+
