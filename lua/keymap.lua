@@ -181,6 +181,7 @@ map("n", "<leader>gd", ":Gitsigns diffthis<CR>", opt)           -- 当前文件 
 map("n", "<leader>hb", ":Gitsigns blame_line<CR>", opt)         -- 当前行 Git Blame
 map("n", "<leader>hp", ":Gitsigns preview_hunk<CR>", opt)       -- 当前 Hunk 的 diff 预览
 
+local wk = require("which-key")
 wk.register({
   g = {
     name = "Git",
