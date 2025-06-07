@@ -1,17 +1,28 @@
-return {{
-    "windwp/nvim-autopairs",
-    event = "InsertEnter", -- 仅在进入插入模式时加载，提高启动速度
-    config = function()
-        require("nvim-autopairs").setup({
-            check_ts = true, -- 开启 treesitter 检查（可提高括号判断准确率）
-            map_cr = true, -- 启用 <CR> 映射，按回车时自动处理括号换行和缩进
-            -- 可选配置，根据需求调整：
-            fast_wrap = {}
-        })
+-- 自动补全括号 / 引号
+return {
+  "windwp/nvim-autopairs",
+  event = "InsertEnter",
 
-        -- 如果你同时在使用 nvim-cmp 进行补全，还可以集成 autopairs 和 cmp（非必须）：
-        local cmp_autopairs = require("nvim-autopairs.completion.cmp")
-        local cmp = require("cmp")
-        cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
+  dependencies = {
+    "hrsh7th/nvim-cmp",   -- 与 cmp 联动（可选）
+  },
+
+  opts = {
+    check_ts = true,      -- treesitter 语法感知
+    fast_wrap = {},
+  },
+
+  config = function(_, opts)
+    local npairs = require("nvim-autopairs")
+    npairs.setup(opts)
+
+    -- 与 nvim-cmp 集成：确认补全后自动插入括号
+    local ok_cmp, cmp = pcall(require, "cmp")
+    if ok_cmp then
+      local cmp_autopairs = require("nvim-autopairs.completion.cmp")
+      cmp.event:on("confirm_done",
+        cmp_autopairs.on_confirm_done({ map_char = { tex = "" } }))
     end
-}}
+  end,
+}
+

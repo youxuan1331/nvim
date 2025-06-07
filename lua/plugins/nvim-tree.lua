@@ -1,53 +1,79 @@
--- return {
---     "nvim-tree/nvim-tree.lua",
---     version = "*",
---     lazy = false,
---     dependencies = {
---         "nvim-tree/nvim-web-devicons",
---     },
---     config = function()
---         require("nvim-tree").setup {
---             update_focused_file = {
---                 enable = true,     -- 启用聚焦功能
---                 update_cwd = true, -- 更新当前工作目录（可选）
---                 ignore_list = {}   -- 忽略的文件类型列表，可根据需要调整
---               },
---         }
---     end,
--- }
+-- 文件浏览器
 return {
   "nvim-tree/nvim-tree.lua",
-  dependencies = {
-    "nvim-tree/nvim-web-devicons",
-    "nvim-telescope/telescope.nvim",
-  },
+  version = "*",
+
+  cmd  = { "NvimTreeToggle", "NvimTreeFocus" },
+  keys = { { "<C-b>", "<cmd>NvimTreeToggle<CR>", desc = "Toggle NvimTree" } },
+
+  dependencies = { "nvim-tree/nvim-web-devicons" },
+
   config = function()
-    require("nvim-tree").setup({
-      view = {
-        width = 30,
-        side = "left",
-      },
-      update_focused_file = {
-        enable = true,
-        update_root = true,
-      },
-    })
+    local nvim_tree = require("nvim-tree")
 
-    vim.keymap.set("n", "<leader>sf", function()
-      local lib = require("nvim-tree.lib")
-      local node = lib.get_node_at_cursor()
-      if not node then return end
+    ---------------------------------------------------------------- on_attach
+    local function my_on_attach(bufnr)
+      local api = require("nvim-tree.api")
 
-      local path = node.absolute_path
-      if node.type ~= "directory" then
-        path = vim.fn.fnamemodify(path, ":h")
+      local function map(lhs, rhs, desc)
+        vim.keymap.set("n", lhs, rhs,
+          { buffer = bufnr, noremap = true, silent = true, desc = desc })
       end
 
-      require("telescope.builtin").live_grep({
-        search_dirs = { path },
-        prompt_title = "Live Grep in " .. path,
-      })
-    end, { desc = "Telescope: grep in selected folder" })
-  end
+      map("l",     api.node.open.edit,                 "打开 / 展开")
+      map("h",     api.node.navigate.parent_close,     "关闭目录")
+      map("<CR>",  api.node.open.edit,                 "打开")
+      map("a",     api.fs.create,                      "新建")
+      map("d",     api.fs.remove,                      "删除")
+      map("r",     api.fs.rename,                      "重命名")
+      map("gy",    api.fs.copy.relative_path,          "复制相对路径")
+    end
+
+    ---------------------------------------------------------------- setup
+    nvim_tree.setup({
+      disable_netrw       = true,
+      hijack_netrw        = true,
+      respect_buf_cwd     = true,
+      update_cwd          = true,
+
+      view = {
+        width            = 35,
+        relativenumber   = true,
+        signcolumn       = "yes",
+      },
+
+      renderer = {
+        highlight_git         = true,
+        highlight_opened_files = "name",
+        root_folder_label      = false,
+        icons = {
+          show = {
+            file          = true,
+            folder        = true,
+            folder_arrow  = true,
+            git           = true,
+          },
+        },
+      },
+
+      git = {
+        enable = true,
+        ignore = false,
+      },
+
+      actions = {
+        open_file = {
+          resize_window = true,
+        },
+      },
+
+      filters = {
+        dotfiles = false,
+        custom   = { "^.git$" },
+      },
+
+      on_attach = my_on_attach,
+    })
+  end,
 }
 

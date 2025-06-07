@@ -1,196 +1,58 @@
--- leader key 为空
-vim.g.mapleader = " "
--- vim.g.maplocalleader = " "
+vim.g.mapleader      = " "
+vim.g.maplocalleader = "\\"
 
-local opt = {
-  noremap = true,
-  silent = true,
-}
+local map = vim.keymap.set
+local opt = { noremap = true, silent = true }
 
--- 本地变量
-local map = vim.api.nvim_set_keymap
+-- Telescope -----------------------------------------------------------
+map("n", "<C-p>", "<cmd>Telescope find_files<CR>", opt)
+map("n", "<C-f>", "<cmd>Telescope live_grep<CR>", opt)
 
--- Telescope
--- 查找文件
-map("n", "<C-p>", ":Telescope find_files<CR>", opt)
--- 全局搜索
-map("n", "<C-f>", ":Telescope live_grep<CR>", opt)
+-- nvim-tree -----------------------------------------------------------
+map({ "n", "i" }, "<C-b>", "<cmd>NvimTreeToggle<CR>", opt)
 
--- Nvim-tree
-map("n", "<C-b>", ":NvimTreeToggle<CR>", opt)
-map("i", "<C-b>", "<Esc>:NvimTreeToggle<CR>", opt)
+-- bufferline ----------------------------------------------------------
+map({ "n", "i" }, "tn", "<cmd>BufferLineCycleNext<CR>", opt)
+map({ "n", "i" }, "tp", "<cmd>BufferLineCyclePrev<CR>", opt)
 
--- bufferline
-map("n", "tn", ":BufferLineCycleNext<CR>", opt)
-map("n", "tp", ":BufferLineCyclePrev<CR>", opt)
-map("i", "tn", "<Esc>:BufferLineCycleNext<CR>", opt)
-map("i", "tp", "<Esc>:BufferLineCyclePrev<CR>", opt)
-
--- 辅助函数：创建一个浮动窗口，并在窗口中显示指定内容
-local function open_floating_window(content, title)
-    local width = vim.api.nvim_get_option("columns")
-    local height = vim.api.nvim_get_option("lines")
-    local win_height = math.ceil(height * 0.5)
-    local win_width = math.ceil(width * 0.5)
-    local row = math.ceil((height - win_height) / 2 - 1)
-    local col = math.ceil((width - win_width) / 2)
-
-    local buf = vim.api.nvim_create_buf(false, true)
-    -- 将内容按行写入 buffer
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(content, "\n"))
-
-    local win = vim.api.nvim_open_win(buf, true, {
-        relative = "editor",
-        row = row,
-        col = col,
-        width = win_width,
-        height = win_height,
-        style = "minimal",
-        border = "rounded",
-    })
-
-    -- 关闭行号显示
-    vim.api.nvim_win_set_option(win, 'number', false)
-    vim.api.nvim_win_set_option(win, 'relativenumber', false)
-
-    -- 设置 <Esc> 快捷键，退出时关闭窗口
-    local close_window_mapping = string.format(
-        [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
-    vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', close_window_mapping, { noremap = true, silent = true })
-
-    return win
+-- ---------- 编译并运行当前 C/C++ 文件 ---------- --------------------
+local function compile_and_run_cpp()
+  local file = vim.api.nvim_buf_get_name(0)
+  if file == "" then return end
+  local ext  = file:match("^.+(%..+)$")
+  local exe  = vim.fn.fnamemodify(file, ":r")
+  local cmd
+  if ext == ".cpp" or ext == ".cc" or ext == ".cxx" then
+    cmd = string.format("clang++ %s -o %s -std=c++20 -O2", file, exe)
+  elseif ext == ".c" then
+    cmd = string.format("gcc %s -o %s -O2", file, exe)
+  else
+    vim.notify("Not a C/C++ file", vim.log.levels.WARN)
+    return
+  end
+  local out = vim.fn.system(cmd)
+  if vim.v.shell_error ~= 0 then
+    vim.notify("❌ 编译失败:\n" .. out, vim.log.levels.ERROR)
+    return
+  end
+  -- 浮窗终端
+  local buf = vim.api.nvim_create_buf(false, true)
+  local w   = math.floor(vim.o.columns * 0.6)
+  local h   = math.floor(vim.o.lines   * 0.6)
+  local win = vim.api.nvim_open_win(buf, true, {
+    relative = "editor", row = (vim.o.lines-h)/2, col = (vim.o.columns-w)/2,
+    width = w, height = h, style = "minimal", border = "rounded",
+  })
+  vim.fn.termopen("./" .. exe)
+  vim.cmd.startinsert()
+  vim.keymap.set("t", "<Esc>", function() vim.api.nvim_win_close(win, true) end,
+                 { buffer = buf, silent = true })
 end
 
--- 编译并运行 C/C++ 文件的函数
-function compile_and_run_cpp()
-    local bufnr = vim.api.nvim_get_current_buf()
-    local filepath = vim.api.nvim_buf_get_name(bufnr)
-    local ext = filepath:match("^.+(%..+)$")  -- 获取文件扩展名
+map({ "n", "i" }, "<F5>", compile_and_run_cpp, opt)
 
-    if ext == '.cpp' then  -- 仅对 C++ 文件生效
-        local filename_without_ext = filepath:match("([^/]+)%.cpp$")
-        local compile_command = "clang " .. filepath .. " -o " .. filename_without_ext .. " -lstdc++"
-
-        -- 执行编译命令
-        local compile_result = vim.fn.system(compile_command)
-
-        if vim.v.shell_error == 0 then
-            -- 编译成功
-            local success_message = "Compilation successful, executable is " .. filename_without_ext .. "\n\nRunning executable..."
-            print(success_message)
-
-            local width = vim.api.nvim_get_option("columns")
-            local height = vim.api.nvim_get_option("lines")
-            local win_height = math.ceil(height * 0.5)
-            local win_width = math.ceil(width * 0.5)
-            local row = math.ceil((height - win_height) / 2 - 1)
-            local col = math.ceil((width - win_width) / 2)
-
-            local buf = vim.api.nvim_create_buf(false, true)
-            local win = vim.api.nvim_open_win(buf, true, {
-                relative = "editor",
-                row = row,
-                col = col,
-                width = win_width,
-                height = win_height,
-                style = "minimal",
-                border = "rounded",
-            })
-
-            vim.api.nvim_win_set_option(win, 'number', false)
-            vim.api.nvim_win_set_option(win, 'relativenumber', false)
-
-            -- 在浮动窗口中启动终端，并运行生成的可执行文件
-            vim.fn.termopen("./" .. filename_without_ext)
-            vim.api.nvim_set_current_win(win)
-            vim.cmd('startinsert')
-
-            local close_window_mapping = string.format(
-                [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
-            vim.api.nvim_buf_set_keymap(buf, 't', '<Esc>', close_window_mapping, { noremap = true, silent = true })
-        else
-            -- 编译失败，显示错误信息
-            local error_message = "Compilation failed:\n" .. compile_result
-            open_floating_window(error_message, "Compile Error")
-        end
-
-    elseif ext == '.c' then  -- 仅对 C 文件生效
-        local filename_without_ext = filepath:match("([^/]+)%.c$")
-        local compile_command = "gcc " .. filepath .. " -o " .. filename_without_ext
-
-        -- 执行编译命令
-        local compile_result = vim.fn.system(compile_command)
-
-        if vim.v.shell_error == 0 then
-            -- 编译成功
-            local success_message = "Compilation successful, executable is " .. filename_without_ext .. "\n\nRunning executable..."
-            print(success_message)
-
-            local width = vim.api.nvim_get_option("columns")
-            local height = vim.api.nvim_get_option("lines")
-            local win_height = math.ceil(height * 0.5)
-            local win_width = math.ceil(width * 0.5)
-            local row = math.ceil((height - win_height) / 2 - 1)
-            local col = math.ceil((width - win_width) / 2)
-
-            local buf = vim.api.nvim_create_buf(false, true)
-            local win = vim.api.nvim_open_win(buf, true, {
-                relative = "editor",
-                row = row,
-                col = col,
-                width = win_width,
-                height = win_height,
-                style = "minimal",
-                border = "rounded",
-            })
-
-            vim.api.nvim_win_set_option(win, 'number', false)
-            vim.api.nvim_win_set_option(win, 'relativenumber', false)
-
-            -- 在浮动窗口中启动终端，并运行生成的可执行文件
-            vim.fn.termopen("./" .. filename_without_ext)
-            vim.api.nvim_set_current_win(win)
-            vim.cmd('startinsert')
-
-            local close_window_mapping = string.format(
-                [[<Cmd>lua vim.api.nvim_win_close(%d, true)<CR>]], win)
-            vim.api.nvim_buf_set_keymap(buf, 't', '<Esc>', close_window_mapping, { noremap = true, silent = true })
-        else
-            -- 编译失败，显示错误信息
-            local error_message = "Compilation failed:\n" .. compile_result
-            open_floating_window(error_message, "Compile Error")
-        end
-    else
-        print("Not a C/C++ file.")
-    end
-end
-
--- F5 键映射：用于编译并运行 C/C++ 文件
-map('n', '<F5>', [[<Cmd>lua compile_and_run_cpp()<CR>]], opt)
-map('i', '<F5>', [[<Cmd>lua compile_and_run_cpp()<CR>]], opt)
-
-vim.keymap.set("n", "<leader>nn", function()
+-- notify 关闭全部
+map("n", "<leader>nn", function()
   require("notify").dismiss({ silent = true, pending = true })
-end, { desc = "关闭所有通知" })
-
--- Git 相关快捷键（Telescope + Gitsigns）
-map("n", "<leader>gc", ":Telescope git_commits<CR>", opt)       -- 所有提交
-map("n", "<leader>gb", ":Telescope git_bcommits<CR>", opt)      -- 当前文件提交历史
-map("n", "<leader>gs", ":Telescope git_status<CR>", opt)        -- Git 状态
-map("n", "<leader>gd", ":Gitsigns diffthis<CR>", opt)           -- 当前文件 diff（gitsigns 浮窗）
-map("n", "<leader>hb", ":Gitsigns blame_line<CR>", opt)         -- 当前行 Git Blame
-map("n", "<leader>hp", ":Gitsigns preview_hunk<CR>", opt)       -- 当前 Hunk 的 diff 预览
-
-local wk = require("which-key")
-wk.register({
-  g = {
-    name = "Git",
-    c = { "<cmd>Telescope git_commits<CR>", "查看所有提交" },
-    b = { "<cmd>Telescope git_bcommits<CR>", "当前文件提交历史" },
-    s = { "<cmd>Telescope git_status<CR>", "Git 状态" },
-    d = { "<cmd>Gitsigns diffthis<CR>", "当前文件 diff" },
-    h = { "<cmd>Gitsigns blame_line<CR>", "当前行 blame" },
-    p = { "<cmd>Gitsigns preview_hunk<CR>", "预览当前改动" },
-  },
-}, { prefix = "<leader>" })
+end, opt)
 
