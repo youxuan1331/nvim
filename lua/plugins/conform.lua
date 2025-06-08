@@ -12,7 +12,6 @@ return {
           args = {
             "--style=file",
             "--assume-filename",
-            vim.fn.expand("~/.config/nvim/tools/dummy.cpp"), -- ✅ 指定 .clang-format 路径所在目录
           },
           stdin = true,
         },
