@@ -57,3 +57,9 @@ vim.opt.whichwrap  = "<,>,[,]"
 -- 让 |ins-completion| 淘汰消息保持安静
 --（上面 shortmess:append('c') 已解决）
 
+-- 支持鼠标
+vim.opt.mouse = "a"            -- 支持鼠标点击、选择、滚动
+vim.opt.mousemoveevent = true  -- 允许拖拽 resize 窗口
+vim.opt.mousemodel = "extend"  -- 鼠标右键进入 Visual 模式
+
+
